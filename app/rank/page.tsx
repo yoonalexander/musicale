@@ -1,6 +1,7 @@
 import Link from "next/link";
 
-import { submitRankVote } from "@/app/actions";
+import { signOutAction, submitRankVote } from "@/app/actions";
+import { FocusTopbar } from "@/components/focus-topbar";
 import { ImmersiveSongPanel } from "@/components/immersive-song-panel";
 import { getRankPair, getViewerState, isDemoMode } from "@/lib/data";
 
@@ -18,6 +19,7 @@ export default async function RankPage({
   const flash = typeof params.flash === "string" ? params.flash : null;
   const error = typeof params.error === "string" ? params.error : null;
   const demoMode = isDemoMode();
+  const showAlerts = Boolean(flash || error || demoMode || !viewer.user);
 
   if (!pair) {
     return (
@@ -30,41 +32,77 @@ export default async function RankPage({
 
   return (
     <section className="focus-stage focus-stage--data">
-      <div className="focus-stage__hud">
-        <div className="focus-stage__badge">Data Mode</div>
-        <div>
-          <span className="focus-stage__meta-label">Voting status</span>
-          <strong className="focus-stage__meta-value">
-            {viewer.user
+      <FocusTopbar
+        accountSlot={
+          viewer.user ? (
+            <div className="focus-topbar__account-cluster">
+              <span className="focus-topbar__account-label">
+                {viewer.profile?.displayName ?? viewer.user.email ?? "Signed in"}
+              </span>
+              <form action={signOutAction}>
+                <button className="focus-topbar__account-button" type="submit">
+                  Sign out
+                </button>
+              </form>
+            </div>
+          ) : (
+            <Link className="focus-topbar__account-button" href="/login">
+              Sign in
+            </Link>
+          )
+        }
+        items={[
+          {
+            label: "Voting Status",
+            value: viewer.user
               ? `${Math.max(viewer.remainingVotes ?? 0, 0)} votes left`
-              : "Login required"}
-          </strong>
-        </div>
-        <div>
-          <span className="focus-stage__meta-label">Rule</span>
-          <strong className="focus-stage__meta-status">
-            Pick the better song without seeing the current rank.
-          </strong>
-        </div>
-      </div>
+              : "Login required",
+          },
+          {
+            label: "Rule",
+            value: "Pick the better song without seeing the current rank.",
+          },
+        ]}
+        leftNav={
+          <>
+            <Link className="focus-topbar__nav-link focus-topbar__brand" href="/">
+              musicale
+            </Link>
+            <Link className="focus-topbar__nav-link" href="/play">
+              Game Mode
+            </Link>
+          </>
+        }
+        modeTitle="Data Mode"
+      />
 
-      <div className="focus-stage__alerts">
-        {flash ? <div className="focus-stage__alert focus-stage__alert--success">{flash}</div> : null}
-        {error ? <div className="focus-stage__alert focus-stage__alert--error">{error}</div> : null}
-        {demoMode ? (
-          <div className="focus-stage__alert">
-            Connect Supabase to enable persistent Elo updates and daily vote
-            limits. The matchup UI is ready, but votes are disabled in demo
-            mode.
-          </div>
-        ) : null}
-        {!viewer.user ? (
-          <div className="focus-stage__alert">
-            <Link href="/login">Sign in</Link> to contribute ranking data and
-            keep spam voting in check.
-          </div>
-        ) : null}
-      </div>
+      {showAlerts ? (
+        <div className="focus-stage__alerts">
+          {flash ? (
+            <div className="focus-stage__alert focus-stage__alert--success">
+              {flash}
+            </div>
+          ) : null}
+          {error ? (
+            <div className="focus-stage__alert focus-stage__alert--error">
+              {error}
+            </div>
+          ) : null}
+          {demoMode ? (
+            <div className="focus-stage__alert">
+              Connect Supabase to enable persistent Elo updates and daily vote
+              limits. The matchup UI is ready, but votes are disabled in demo
+              mode.
+            </div>
+          ) : null}
+          {!viewer.user ? (
+            <div className="focus-stage__alert">
+              <Link href="/login">Sign in</Link> to contribute ranking data and
+              keep spam voting in check.
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="focus-stage__split">
         <ImmersiveSongPanel

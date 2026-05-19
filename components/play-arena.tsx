@@ -3,18 +3,26 @@
 import { startTransition, useEffect, useState } from "react";
 import Link from "next/link";
 
-import { submitGameRunAction } from "@/app/actions";
+import { signOutAction, submitGameRunAction } from "@/app/actions";
+import { FocusTopbar } from "@/components/focus-topbar";
 import { ImmersiveSongPanel } from "@/components/immersive-song-panel";
 import { formatRating } from "@/lib/format";
 import { evaluateGuess } from "@/lib/game";
 import type { Song } from "@/types/domain";
 
 interface PlayArenaProps {
+  accountLabel: string | null;
   songs: Song[];
   canSaveScore: boolean;
+  isSignedIn: boolean;
 }
 
-export function PlayArena({ songs, canSaveScore }: PlayArenaProps) {
+export function PlayArena({
+  accountLabel,
+  songs,
+  canSaveScore,
+  isSignedIn,
+}: PlayArenaProps) {
   const [index, setIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [resultState, setResultState] = useState<"idle" | "correct" | "wrong">(
@@ -94,17 +102,41 @@ export function PlayArena({ songs, canSaveScore }: PlayArenaProps) {
 
   return (
     <section className="focus-stage">
-      <div className="focus-stage__hud">
-        <div className="focus-stage__badge">Game Mode</div>
-        <div>
-          <span className="focus-stage__meta-label">Current run</span>
-          <strong className="focus-stage__meta-value">{score}</strong>
-        </div>
-        <div>
-          <span className="focus-stage__meta-label">Status</span>
-          <strong className="focus-stage__meta-status">{stageMessage}</strong>
-        </div>
-      </div>
+      <FocusTopbar
+        accountSlot={
+          isSignedIn ? (
+            <div className="focus-topbar__account-cluster">
+              <span className="focus-topbar__account-label">
+                {accountLabel ?? "Signed in"}
+              </span>
+              <form action={signOutAction}>
+                <button className="focus-topbar__account-button" type="submit">
+                  Sign out
+                </button>
+              </form>
+            </div>
+          ) : (
+            <Link className="focus-topbar__account-button" href="/login">
+              Sign in
+            </Link>
+          )
+        }
+        items={[
+          { label: "Current Run", value: score },
+          { label: "Status", value: stageMessage },
+        ]}
+        leftNav={
+          <>
+            <Link className="focus-topbar__nav-link focus-topbar__brand" href="/">
+              musicale
+            </Link>
+            <Link className="focus-topbar__nav-link" href="/rank">
+              Data Mode
+            </Link>
+          </>
+        }
+        modeTitle="Game Mode"
+      />
 
       <div className="focus-stage__split">
         <ImmersiveSongPanel

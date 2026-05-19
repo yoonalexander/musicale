@@ -506,138 +506,131 @@ select {
   color: var(--muted);
 }
 
-.immersive-nav {
-  position: fixed;
-  top: 18px;
-  left: 18px;
-  right: 18px;
-  z-index: 40;
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  pointer-events: none;
-}
-
-.immersive-nav__group {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  pointer-events: auto;
-}
-
-.immersive-nav__pill,
-.immersive-nav__status {
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(12, 10, 10, 0.52);
-  color: rgba(255, 247, 240, 0.96);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
-}
-
-.immersive-nav__pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 48px;
-  padding: 0 18px;
-}
-
-.immersive-nav__brand {
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.immersive-nav__status {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 11px 16px;
-}
-
-.immersive-nav__status strong {
-  font-size: 0.92rem;
-}
-
-.immersive-nav__status span {
-  font-size: 0.78rem;
-  color: rgba(255, 247, 240, 0.72);
-}
-
 .focus-stage {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0;
   height: 100dvh;
   max-height: 100dvh;
-  padding: 84px 14px 14px;
+  padding: 0;
   overflow: hidden;
 }
 
-.focus-stage__hud,
+.focus-topbar,
 .focus-stage__alerts,
 .focus-stage__split {
   position: relative;
   z-index: 3;
-  max-width: 1500px;
-  margin: 0 auto;
   width: 100%;
 }
 
-.focus-stage__hud {
+.focus-topbar {
   display: grid;
-  grid-template-columns: auto minmax(0, 260px) minmax(0, 1fr);
-  gap: 12px;
-  align-items: stretch;
-  flex: 0 0 auto;
-}
-
-.focus-stage__badge,
-.focus-stage__hud > div,
-.focus-stage__alert {
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(12, 10, 10, 0.5);
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 66px;
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(12, 10, 10, 0.86);
   color: rgba(255, 247, 240, 0.96);
   backdrop-filter: blur(18px);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
 }
 
-.focus-stage__badge {
-  display: inline-flex;
+.focus-topbar__left,
+.focus-topbar__center,
+.focus-topbar__right,
+.focus-topbar__account-cluster {
+  display: flex;
   align-items: center;
+}
+
+.focus-topbar__left,
+.focus-topbar__center,
+.focus-topbar__account-cluster {
+  gap: 22px;
+}
+
+.focus-topbar__center {
+  min-width: 0;
   justify-content: center;
-  padding: 0 18px;
-  border-radius: 999px;
-  min-height: 74px;
+}
+
+.focus-topbar__mode {
+  flex: 0 0 auto;
+  font-family: var(--display-font);
+  font-size: 1.02rem;
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
-.focus-stage__hud > div {
-  border-radius: 28px;
-  padding: 16px 18px;
+.focus-topbar__item {
+  min-width: 0;
 }
 
-.focus-stage__meta-label {
+.focus-topbar__label {
   display: block;
-  margin-bottom: 8px;
-  color: rgba(255, 247, 240, 0.7);
-  font-size: 0.78rem;
+  margin-bottom: 2px;
+  color: rgba(255, 247, 240, 0.58);
+  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
-.focus-stage__meta-value,
-.focus-stage__meta-status {
+.focus-topbar__value {
   display: block;
+  overflow: hidden;
   color: white;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.focus-topbar__nav-link {
+  color: rgba(255, 247, 240, 0.82);
+  font-size: 0.95rem;
+  transition: opacity 180ms ease;
+}
+
+.focus-topbar__nav-link:hover {
+  opacity: 0.72;
+}
+
+.focus-topbar__brand {
   font-family: var(--display-font);
-  font-size: 1.32rem;
-  line-height: 1.08;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.focus-topbar__right {
+  justify-content: flex-end;
+}
+
+.focus-topbar__account-label {
+  color: rgba(255, 247, 240, 0.76);
+  font-size: 0.88rem;
+}
+
+.focus-topbar__account-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 247, 240, 0.96);
+  transition: transform 180ms ease, background 180ms ease;
+}
+
+.focus-topbar__account-button:hover {
+  transform: translateY(-1px);
 }
 
 .focus-stage__alerts {
@@ -645,12 +638,18 @@ select {
   flex-wrap: wrap;
   gap: 10px;
   flex: 0 0 auto;
+  padding: 10px 12px 0;
 }
 
 .focus-stage__alert {
   border-radius: 999px;
   padding: 12px 16px;
   font-size: 0.94rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(12, 10, 10, 0.5);
+  color: rgba(255, 247, 240, 0.96);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
 }
 
 .focus-stage__alert a {
@@ -669,10 +668,11 @@ select {
   position: relative;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 8px;
   flex: 1 1 auto;
   min-height: 0;
   height: 100%;
+  padding-top: 8px;
 }
 
 .focus-stage__versus {
@@ -683,13 +683,13 @@ select {
   transform: translate(-50%, -50%);
   display: grid;
   place-items: center;
-  width: 96px;
-  height: 96px;
+  width: 74px;
+  height: 74px;
   border-radius: 999px;
   background: rgba(255, 251, 246, 0.96);
   color: #181212;
   font-family: var(--display-font);
-  font-size: 2rem;
+  font-size: 1.45rem;
   font-weight: 800;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.28);
 }
@@ -699,7 +699,7 @@ select {
   overflow: hidden;
   min-height: 0;
   height: 100%;
-  border-radius: 30px;
+  border-radius: 0 0 28px 28px;
   background: #1a1616;
 }
 
@@ -761,7 +761,7 @@ select {
   justify-content: flex-end;
   gap: clamp(12px, 1.6vh, 22px);
   min-height: 100%;
-  padding: clamp(20px, 2.6vw, 40px);
+  padding: clamp(22px, 2.2vw, 34px);
   color: white;
 }
 
@@ -796,16 +796,16 @@ select {
 .focus-panel__copy h2 {
   margin: 0;
   font-family: var(--display-font);
-  font-size: clamp(2.5rem, 4.8vw, 5rem);
+  font-size: clamp(2.4rem, 4.6vw, 4.9rem);
   line-height: 0.96;
   letter-spacing: -0.05em;
 }
 
 .focus-panel__copy p,
 .media-modal-header p {
-  margin: 10px 0 0;
+  margin: 6px 0 0;
   color: rgba(255, 247, 240, 0.78);
-  font-size: 0.98rem;
+  font-size: 1rem;
 }
 
 .focus-panel__metric {
@@ -825,7 +825,7 @@ select {
 .focus-metric__value {
   color: #ffd76c;
   font-family: var(--display-font);
-  font-size: clamp(1.8rem, 4vw, 3.8rem);
+  font-size: clamp(1.9rem, 3.7vw, 3.55rem);
   line-height: 0.92;
 }
 
@@ -922,18 +922,18 @@ select {
 }
 
 .focus-stage__corner {
-  bottom: 18px;
-  padding: 12px 16px;
+  bottom: 12px;
+  padding: 10px 14px;
   border-radius: 999px;
   font-weight: 700;
 }
 
 .focus-stage__corner--left {
-  left: 18px;
+  left: 12px;
 }
 
 .focus-stage__corner--right {
-  right: 18px;
+  right: 12px;
 }
 
 .focus-stage__summary {
@@ -1036,35 +1036,39 @@ select {
     flex-direction: column;
   }
 
-  .immersive-nav {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .immersive-nav__group {
-    justify-content: space-between;
-  }
-
   .focus-stage {
     height: 100dvh;
     max-height: 100dvh;
-    padding-top: 116px;
   }
 
-  .focus-stage__hud {
-    grid-template-columns: 1fr;
+  .focus-topbar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 14px;
+    padding: 0 12px;
   }
 
-  .focus-stage__split {
-    grid-template-columns: 1fr;
+  .focus-topbar__left,
+  .focus-topbar__center,
+  .focus-topbar__account-cluster {
+    gap: 14px;
+  }
+
+  .focus-topbar__mode {
+    font-size: 0.94rem;
+  }
+
+  .focus-topbar__label {
+    font-size: 0.66rem;
+  }
+
+  .focus-topbar__value {
+    font-size: 0.86rem;
   }
 
   .focus-stage__versus {
-    position: relative;
-    top: auto;
-    left: auto;
-    transform: none;
-    margin: -8px auto;
+    width: 62px;
+    height: 62px;
+    font-size: 1.25rem;
   }
 
   .focus-panel {
@@ -1105,14 +1109,18 @@ select {
   }
 
   .focus-panel__content {
-    padding: 18px;
+    padding: 16px;
   }
 
   .focus-panel__copy h2 {
-    font-size: 2.35rem;
+    font-size: 2rem;
   }
 
   .focus-metric__value {
-    font-size: 2.1rem;
+    font-size: 1.8rem;
+  }
+
+  .focus-topbar__account-label {
+    display: none;
   }
 }
