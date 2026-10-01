@@ -1,43 +1,42 @@
 import { requestMagicLinkAction } from "@/app/actions";
 import { isDemoMode } from "@/lib/data";
-
-export default async function LoginPage({
+export default async function Login({
   searchParams,
 }: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  const params = await searchParams;
-  const message = typeof params.message === "string" ? params.message : null;
-  const demoMode = isDemoMode();
-
+  const p = await searchParams;
   return (
-    <div className="auth-layout">
-      <section className="auth-card">
-        <span className="eyebrow">Sign in</span>
-        <h1>Keep votes trustworthy and streaks permanent.</h1>
-        <p>
-          Musicale uses email magic links so contributors can vote in Data Mode
-          and save leaderboard runs without managing passwords.
-        </p>
-
-        {message ? <div className="banner">{message}</div> : null}
-        {demoMode ? (
-          <div className="banner">
-            Supabase is not configured yet, so sign-in is currently in setup
-            mode.
-          </div>
-        ) : null}
-
-        <form action={requestMagicLinkAction} className="stack">
-          <label className="field">
-            <span>Email address</span>
-            <input name="email" placeholder="you@example.com" type="email" />
-          </label>
-          <button className="primary-button" type="submit">
-            Send magic link
-          </button>
-        </form>
-      </section>
-    </div>
+    <section className="auth">
+      <p className="kicker">One link. No password.</p>
+      <h1>Keep your vote and your streak.</h1>
+      <p>We’ll email you a secure, one-time sign-in link.</p>
+      {p.message ? (
+        <div className="notice" role="status">
+          {p.message}
+        </div>
+      ) : null}
+      {isDemoMode() ? (
+        <div className="notice">
+          Supabase is not configured in this environment.
+        </div>
+      ) : null}
+      <form action={requestMagicLinkAction}>
+        <label>
+          Email address
+          <input
+            name="email"
+            type="email"
+            autoComplete="email"
+            maxLength={254}
+            required
+            placeholder="you@example.com"
+          />
+        </label>
+        <button className="button" disabled={isDemoMode()}>
+          Send magic link
+        </button>
+      </form>
+    </section>
   );
 }

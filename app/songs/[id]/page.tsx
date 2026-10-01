@@ -1,0 +1,97 @@
+import { notFound } from "next/navigation";
+import { getSong, getSongHistory } from "@/lib/data";
+import { providerLabels } from "@/lib/providers";
+import { RatingHistory } from "@/components/rating-history";
+
+export default async function SongPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const data = await getSong(id);
+  if (!data) notFound();
+  const { song, rank } = data;
+  const history = await getSongHistory(id);
+  return (
+    <section className="song-detail">
+      <div className="detail-art">
+        {song.artworkUrl ? (
+          <img
+            src={song.artworkUrl}
+            alt={`${song.title} artwork`}
+            width="600"
+            height="600"
+          />
+        ) : (
+          <span aria-hidden="true">{song.title[0]}</span>
+        )}
+      </div>
+      <div>
+        <p className="kicker">
+          {rank ? `#${rank} worldwide` : "Currently unavailable"} ·{" "}
+          {song.genre ?? "Music"}
+        </p>
+        <h1>{song.title}</h1>
+        <p className="subtitle">
+          {song.artistName} · {song.albumName} · {song.releaseYear}
+        </p>
+        <div className="actions">
+          {song.providers.map((p) => (
+            <a
+              key={p.provider}
+              className="button secondary"
+              href={p.externalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {p.provider === "musicbrainz" ? "View on" : "Listen on"}{" "}
+              {providerLabels[p.provider]}
+            </a>
+          ))}
+        </div>
+        <dl className="stats">
+          <div>
+            <dt>Elo</dt>
+            <dd>{Math.round(song.eloRating)}</dd>
+          </div>
+          <div>
+            <dt>Record</dt>
+            <dd>
+              {song.wins}–{song.losses}
+            </dd>
+          </div>
+          <div>
+            <dt>Win rate</dt>
+            <dd>
+              {song.matchupCount
+                ? Math.round((song.wins / song.matchupCount) * 100)
+                : 0}
+              %
+            </dd>
+          </div>
+          <div>
+            <dt>Total votes</dt>
+            <dd>{song.matchupCount}</dd>
+          </div>
+        </dl>
+        <RatingHistory snapshots={history.snapshots} />
+        <section className="panel">
+          <h2>Recent daily matchups</h2>
+          {history.matchups.length ? (
+            <ul>
+              {history.matchups.map((m) => (
+                <li key={m.matchup_day}>
+                  {m.matchup_day}: {m.song_a_title} ({m.song_a_votes}) vs{" "}
+                  {m.song_b_title} ({m.song_b_votes})
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>Completed daily matchups will appear here.</p>
+          )}
+        </section>
+      </div>
+    </section>
+  );
+}

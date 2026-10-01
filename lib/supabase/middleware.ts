@@ -9,7 +9,7 @@ type CookieMutation = {
   options?: Record<string, unknown>;
 };
 
-export function updateSession(request: NextRequest) {
+export async function updateSession(request: NextRequest) {
   if (!isSupabaseConfigured()) {
     return NextResponse.next({ request });
   }
@@ -29,6 +29,9 @@ export function updateSession(request: NextRequest) {
         setAll(cookiesToSet: CookieMutation[]) {
           cookiesToSet.forEach(({ name, value, options }) => {
             request.cookies.set(name, value);
+          });
+          response = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) => {
             response.cookies.set(name, value, options as never);
           });
         },
@@ -36,7 +39,7 @@ export function updateSession(request: NextRequest) {
     },
   );
 
-  void supabase.auth.getUser();
+  await supabase.auth.getUser();
 
   return response;
 }

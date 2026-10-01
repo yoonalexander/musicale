@@ -1,36 +1,21 @@
-insert into public.songs (
-  id,
-  title,
-  musical_title,
-  category,
-  artist_label,
-  artwork_url,
-  youtube_url,
-  status,
-  release_year,
-  tags,
-  elo_rating,
-  vote_count
-)
-values
-  ('defying-gravity-wicked', 'Defying Gravity', 'Wicked', 'broadway', 'Original Broadway Cast', null, 'https://www.youtube.com/results?search_query=Defying+Gravity+Wicked', 'active', 2003, '{"anthem","duet","witches"}', 1286, 26),
-  ('one-day-more-les-miserables', 'One Day More', 'Les Miserables', 'broadway', 'Original London Cast', null, 'https://www.youtube.com/results?search_query=One+Day+More+Les+Miserables', 'active', 1985, '{"ensemble","anthem","revolution"}', 1271, 24),
-  ('wait-for-it-hamilton', 'Wait for It', 'Hamilton', 'broadway', 'Original Broadway Cast', null, 'https://www.youtube.com/results?search_query=Wait+for+It+Hamilton', 'active', 2015, '{"character","ballad","hamilton"}', 1262, 19),
-  ('suddenly-seymour-little-shop', 'Suddenly, Seymour', 'Little Shop of Horrors', 'broadway', 'Original Off-Broadway Cast', null, 'https://www.youtube.com/results?search_query=Suddenly+Seymour+Little+Shop+of+Horrors', 'active', 1982, '{"duet","romance","cult"}', 1229, 14),
-  ('memory-cats', 'Memory', 'Cats', 'broadway', 'Original London Cast', null, 'https://www.youtube.com/results?search_query=Memory+Cats+musical', 'active', 1981, '{"ballad","classic","solo"}', 1215, 17),
-  ('you-cant-stop-the-beat-hairspray', 'You Can''t Stop the Beat', 'Hairspray', 'broadway', 'Original Broadway Cast', null, 'https://www.youtube.com/results?search_query=You+Cant+Stop+the+Beat+Hairspray', 'active', 2002, '{"finale","ensemble","dance"}', 1248, 18),
-  ('seasons-of-love-rent', 'Seasons of Love', 'Rent', 'broadway', 'Original Broadway Cast', null, 'https://www.youtube.com/results?search_query=Seasons+of+Love+Rent', 'active', 1996, '{"ensemble","ballad","friendship"}', 1237, 16),
-  ('dont-rain-on-my-parade-funny-girl', 'Don''t Rain on My Parade', 'Funny Girl', 'broadway', 'Original Broadway Cast', null, 'https://www.youtube.com/results?search_query=Dont+Rain+on+My+Parade+Funny+Girl', 'active', 1964, '{"belt","anthem","classic"}', 1244, 15),
-  ('the-circle-of-life-lion-king', 'Circle of Life', 'The Lion King', 'movie', 'Original Motion Picture Soundtrack', null, 'https://www.youtube.com/results?search_query=Circle+of+Life+Lion+King', 'active', 1994, '{"opening","anthem","disney"}', 1268, 20),
-  ('let-it-go-frozen', 'Let It Go', 'Frozen', 'movie', 'Original Motion Picture Soundtrack', null, 'https://www.youtube.com/results?search_query=Let+It+Go+Frozen', 'active', 2013, '{"anthem","disney","solo"}', 1257, 22),
-  ('a-million-dreams-greatest-showman', 'A Million Dreams', 'The Greatest Showman', 'movie', 'Original Motion Picture Soundtrack', null, 'https://www.youtube.com/results?search_query=A+Million+Dreams+Greatest+Showman', 'active', 2017, '{"ballad","dreamer","duet"}', 1219, 13),
-  ('what-is-this-feeling-wicked', 'What Is This Feeling?', 'Wicked', 'broadway', 'Original Broadway Cast', null, 'https://www.youtube.com/results?search_query=What+Is+This+Feeling+Wicked', 'active', 2003, '{"duet","comedy","witches"}', 1196, 11),
-  ('all-that-jazz-chicago', 'All That Jazz', 'Chicago', 'movie', 'Original Motion Picture Soundtrack', null, 'https://www.youtube.com/results?search_query=All+That+Jazz+Chicago+movie', 'active', 2002, '{"jazz","opening","movie-musical"}', 1208, 12),
-  ('summer-nights-grease', 'Summer Nights', 'Grease', 'movie', 'Original Motion Picture Soundtrack', null, 'https://www.youtube.com/results?search_query=Summer+Nights+Grease', 'active', 1978, '{"duet","classic","romance"}', 1224, 15),
-  ('my-shot-hamilton', 'My Shot', 'Hamilton', 'broadway', 'Original Broadway Cast', null, 'https://www.youtube.com/results?search_query=My+Shot+Hamilton', 'active', 2015, '{"rap","anthem","revolution"}', 1233, 17),
-  ('take-me-or-leave-me-rent', 'Take Me or Leave Me', 'Rent', 'broadway', 'Original Broadway Cast', null, 'https://www.youtube.com/results?search_query=Take+Me+or+Leave+Me+Rent', 'active', 1996, '{"duet","belt","conflict"}', 1212, 12),
-  ('rewrite-the-stars-greatest-showman', 'Rewrite the Stars', 'The Greatest Showman', 'movie', 'Original Motion Picture Soundtrack', null, 'https://www.youtube.com/results?search_query=Rewrite+the+Stars+Greatest+Showman', 'active', 2017, '{"duet","romance","movie-musical"}', 1241, 16),
-  ('breaking-free-high-school-musical', 'Breaking Free', 'High School Musical', 'movie', 'Original TV Movie Soundtrack', null, 'https://www.youtube.com/results?search_query=Breaking+Free+High+School+Musical', 'active', 2006, '{"duet","disney","finale"}', 1205, 10),
-  ('i-dreamed-a-dream-les-miserables', 'I Dreamed a Dream', 'Les Miserables', 'broadway', 'Original London Cast', null, 'https://www.youtube.com/results?search_query=I+Dreamed+a+Dream+Les+Miserables', 'active', 1985, '{"ballad","classic","solo"}', 1249, 19),
-  ('under-the-sea-little-mermaid', 'Under the Sea', 'The Little Mermaid', 'movie', 'Original Motion Picture Soundtrack', null, 'https://www.youtube.com/results?search_query=Under+the+Sea+Little+Mermaid', 'active', 1989, '{"disney","comedy","ensemble"}', 1217, 14)
-on conflict (id) do nothing;
+insert into public.songs(id,title,normalized_title,artist_name,normalized_artist_name,album_name,release_year,genre) values
+('respect-aretha','Respect','respect','Aretha Franklin','aretha franklin','I Never Loved a Man the Way I Love You',1967,'Soul'),
+('god-only-knows','God Only Knows','god only knows','The Beach Boys','the beach boys','Pet Sounds',1966,'Pop'),
+('dreams-fleetwood-mac','Dreams','dreams','Fleetwood Mac','fleetwood mac','Rumours',1977,'Rock'),
+('superstition-stevie-wonder','Superstition','superstition','Stevie Wonder','stevie wonder','Talking Book',1972,'Funk'),
+('fast-car-tracy-chapman','Fast Car','fast car','Tracy Chapman','tracy chapman','Tracy Chapman',1988,'Folk Rock'),
+('juicy-notorious-big','Juicy','juicy','The Notorious B.I.G.','the notorious big','Ready to Die',1994,'Hip-Hop'),
+('crazy-in-love-beyonce','Crazy in Love','crazy in love','Beyoncé','beyonce','Dangerously in Love',2003,'R&B'),
+('paper-planes-mia','Paper Planes','paper planes','M.I.A.','mia','Kala',2007,'Alternative'),
+('alright-kendrick-lamar','Alright','alright','Kendrick Lamar','kendrick lamar','To Pimp a Butterfly',2015,'Hip-Hop'),
+('bad-guy-billie-eilish','bad guy','bad guy','Billie Eilish','billie eilish','When We All Fall Asleep, Where Do We Go?',2019,'Pop') on conflict(id) do nothing;
+-- Official uploads verified 2026-10-01; external links avoid embedding/cookie assumptions.
+insert into public.song_providers(song_id,provider,provider_song_id,external_url) values
+('respect-aretha','youtube','JzqGZjFnYnA','https://www.youtube.com/watch?v=JzqGZjFnYnA'),
+('god-only-knows','youtube','NADx3-qRxek','https://www.youtube.com/watch?v=NADx3-qRxek')
+on conflict(provider,provider_song_id) do nothing;
+insert into public.daily_matchups(matchup_day,song_a_id,song_b_id,starts_at,ends_at,status,selection_strategy)
+select (now() at time zone 'UTC')::date,'respect-aretha','god-only-knows',
+  date_trunc('day',now() at time zone 'UTC') at time zone 'UTC',
+  (date_trunc('day',now() at time zone 'UTC')+interval '1 day') at time zone 'UTC','scheduled','editorial'
+on conflict(matchup_day) do nothing;

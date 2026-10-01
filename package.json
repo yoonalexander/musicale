@@ -7,19 +7,33 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --experimental-strip-types tests/run-tests.ts"
+    "test": "tsx tests/run-tests.ts",
+    "typecheck": "tsc --noEmit",
+    "test:db": "node tests/database.mjs",
+    "test:ui": "node tests/build-local.mjs && playwright test",
+    "local:start": "supabase start",
+    "local:stop": "supabase stop",
+    "verify": "npm run test && npm run test:db && npm run test:ui && npm run typecheck"
+  },
+  "overrides": {
+    "postcss": "^8.5.28",
+    "esbuild": "^0.28.2"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.99.3",
-    "next": "^15.2.0",
+    "next": "^15.5.27",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0",
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "prettier": "^3.9.9",
+    "supabase": "^2.119.0",
     "tsx": "^4.19.3",
     "typescript": "^5.8.3"
   }

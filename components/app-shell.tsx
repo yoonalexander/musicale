@@ -1,88 +1,40 @@
-"use client";
-
 import Link from "next/link";
-import type { Route } from "next";
-import { usePathname } from "next/navigation";
-
 import { signOutAction } from "@/app/actions";
-import type { Profile } from "@/types/domain";
-
-interface AppShellProps {
+import type { ViewerState } from "@/types/domain";
+export function AppShell({
+  children,
+  viewer,
+}: {
   children: React.ReactNode;
-  user: {
-    id: string;
-    email?: string;
-  } | null;
-  profile: Profile | null;
-  isAdmin: boolean;
-}
-
-const navItems = [
-  { href: "/", label: "Home" },
-  { href: "/rank", label: "Data Mode" },
-  { href: "/play", label: "Game Mode" },
-  { href: "/leaderboard", label: "Leaderboards" },
-  { href: "/songs", label: "Songs" },
-] as const satisfies ReadonlyArray<{ href: Route; label: string }>;
-
-export function AppShell({ children, user, profile, isAdmin }: AppShellProps) {
-  const pathname = usePathname();
-  const isImmersiveMode = pathname === "/rank" || pathname === "/play";
-
-  if (isImmersiveMode) {
-    return (
-      <div className="shell shell--immersive">
-        <main className="page-frame page-frame--immersive">{children}</main>
-      </div>
-    );
-  }
-
+  viewer: ViewerState;
+}) {
   return (
-    <div className="shell">
-      <header className="topbar">
-        <Link className="brand" href="/">
-          <span className="brand-mark">M</span>
-          <div>
-            <strong>musicale</strong>
-            <p>Rank the songs that know how to bring the house down.</p>
-          </div>
+    <>
+      <header className="site-header">
+        <Link className="wordmark" href="/">
+          Musicale
         </Link>
-
-        <nav className="nav">
-          {navItems.map((item) => (
-            <Link key={item.href} className="nav-link" href={item.href}>
-              {item.label}
-            </Link>
-          ))}
-          {isAdmin ? (
-            <Link className="nav-link accent" href="/admin">
-              Admin
-            </Link>
-          ) : null}
+        <nav aria-label="Main navigation">
+          <Link href="/today">Today</Link>
+          <Link href="/leaderboard">Leaderboard</Link>
+          {viewer.user ? <Link href="/profile">Profile</Link> : null}
+          {viewer.isAdmin ? <Link href="/admin">Admin</Link> : null}
         </nav>
-
-        <div className="account-chip">
-          {user ? (
-            <>
-              <div>
-                <strong>{profile?.displayName ?? user.email ?? "Signed in"}</strong>
-                <p>{isAdmin ? "Administrator" : "Community voter"}</p>
-              </div>
-              <form action={signOutAction}>
-                <button className="ghost-button" type="submit">
-                  Sign out
-                </button>
-              </form>
-            </>
-          ) : (
-            <Link className="ghost-button" href="/login">
-              Sign in
-            </Link>
-          )}
-        </div>
+        {viewer.user ? (
+          <form action={signOutAction}>
+            <button className="text-button">Sign out</button>
+          </form>
+        ) : (
+          <Link className="button small" href="/login">
+            Sign in
+          </Link>
+        )}
       </header>
-
-      <main className="page-frame">{children}</main>
-    </div>
+      <main>{children}</main>
+      <footer>
+        <span>Musicale</span>
+        <span>Music playback remains with its provider.</span>
+      </footer>
+    </>
   );
 }

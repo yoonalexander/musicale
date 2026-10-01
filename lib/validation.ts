@@ -1,0 +1,81 @@
+import { safeProviderUrl } from "@/lib/providers";
+import type { SongProvider } from "@/types/domain";
+
+export function validDay(value: string) {
+  return (
+    /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+    Number.isFinite(Date.parse(`${value}T00:00:00Z`)) &&
+    new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value
+  );
+}
+export function utcWindow(day: string) {
+  if (!validDay(day)) throw new Error("Enter a valid calendar date.");
+  const next = new Date(`${day}T00:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + 1);
+  return { starts_at: `${day}T00:00:00Z`, ends_at: next.toISOString() };
+}
+export function songId(value: string) {
+  if (!/^[a-z0-9][a-z0-9-]{0,99}$/.test(value))
+    throw new Error(
+      "Song IDs use lowercase letters, numbers and hyphens (up to 100 characters).",
+    );
+  return value;
+}
+export interface SongInput {
+  id: string;
+  title: string;
+  artistName: string;
+  albumName: string;
+  releaseYear: number;
+  genre: string | null;
+  status: "active" | "unavailable" | "disabled";
+  providers: SongProvider[];
+}
+export function validateSong(value: unknown): SongInput {
+  if (!value || typeof value !== "object")
+    throw new Error("Each song must be an object.");
+  const r = value as Record<string, unknown>;
+  const title = String(r.title ?? "").trim(),
+    artistName = String(r.artistName ?? "").trim();
+  if (!title || title.length > 200 || !artistName || artistName.length > 200)
+    throw new Error("Title and artist are required (up to 200 characters).");
+  const releaseYear = Number(r.releaseYear);
+  if (
+    !Number.isInteger(releaseYear) ||
+    releaseYear < 1860 ||
+    releaseYear > 2200
+  )
+    throw new Error("Enter a release year between 1860 and 2200.");
+  const status = r.status ?? "active";
+  if (!["active", "unavailable", "disabled"].includes(String(status)))
+    throw new Error("Invalid song status.");
+  const providers = Array.isArray(r.providers)
+    ? r.providers.map((p) => {
+        const url = safeProviderUrl(p.provider, p.externalUrl);
+        const id = String(p.providerSongId ?? "").trim();
+        if (!url || !id || id.length > 200)
+          throw new Error(
+            "Providers need a valid ID and HTTPS link on their official domain.",
+          );
+        return {
+          provider: p.provider,
+          providerSongId: id,
+          externalUrl: url,
+        } as SongProvider;
+      })
+    : [];
+  if (new Set(providers.map((p) => p.provider)).size !== providers.length)
+    throw new Error("Use each provider only once per song.");
+  if (providers.length > 4)
+    throw new Error("Use up to four supported providers.");
+  return {
+    id: songId(String(r.id ?? "")),
+    title,
+    artistName,
+    albumName: String(r.albumName ?? "Single").slice(0, 200),
+    releaseYear,
+    genre: r.genre ? String(r.genre).slice(0, 100) : null,
+    status: status as SongInput["status"],
+    providers,
+  };
+}

@@ -1,32 +1,25 @@
 import type { Metadata } from "next";
-
 import "./globals.css";
-
 import { AppShell } from "@/components/app-shell";
 import { getViewerState } from "@/lib/data";
-
 export const metadata: Metadata = {
-  title: "musicale",
-  description: "A ranking game that builds a global leaderboard for musical songs.",
+  title: {
+    default: "Musicale — Every day. Two songs. One choice.",
+    template: "%s — Musicale",
+  },
+  description:
+    "Listen to today's matchup, choose your favorite, and shape the global song leaderboard.",
 };
-
-export default async function RootLayout({
+export default async function Layout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   const viewer = await getViewerState();
-
   return (
     <html lang="en">
       <body>
-        <AppShell
-          isAdmin={viewer.isAdmin}
-          profile={viewer.profile}
-          user={viewer.user}
-        >
-          {children}
-        </AppShell>
+        <AppShell viewer={viewer}>{children}</AppShell>
       </body>
     </html>
   );

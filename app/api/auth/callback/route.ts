@@ -9,8 +9,12 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await getSupabaseServerClient();
-    await supabase?.auth.exchangeCodeForSession(code);
+    const result = await supabase?.auth.exchangeCodeForSession(code);
+    if (result && !result.error)
+      return NextResponse.redirect(`${getSiteUrl()}/today`);
   }
 
-  return NextResponse.redirect(`${getSiteUrl()}/`);
+  return NextResponse.redirect(
+    `${getSiteUrl()}/login?message=Sign-in+link+expired+or+invalid.+Request+a+new+link.`,
+  );
 }

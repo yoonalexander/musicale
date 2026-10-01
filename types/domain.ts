@@ -1,78 +1,74 @@
-export type SongCategory = "broadway" | "movie";
-export type SongStatus = "active" | "inactive";
+export type SongStatus = "active" | "unavailable" | "disabled";
 export type UserRole = "user" | "admin";
+
+export interface SongProvider {
+  provider: "youtube" | "spotify" | "apple_music" | "musicbrainz";
+  providerSongId: string;
+  externalUrl: string;
+}
 
 export interface Song {
   id: string;
   title: string;
-  musicalTitle: string;
-  category: SongCategory;
-  artistLabel: string;
+  artistName: string;
+  albumName: string;
   artworkUrl: string | null;
-  youtubeUrl: string | null;
-  status: SongStatus;
   releaseYear: number;
-  tags: string[];
+  genre: string | null;
   eloRating: number;
-  voteCount: number;
+  wins: number;
+  losses: number;
+  matchupCount: number;
+  status: SongStatus;
+  providers: SongProvider[];
 }
 
-export interface VoteRecord {
+export interface Matchup {
   id: string;
-  userId: string;
-  leftSongId: string;
-  rightSongId: string;
-  winnerSongId: string;
-  loserSongId: string;
-  ratingDeltaWinner: number;
-  ratingDeltaLoser: number;
-  createdAt: string;
+  matchupDay: string;
+  number: number;
+  startsAt: string;
+  endsAt: string;
+  songA: Song;
+  songB: Song;
+  totalVotes: number;
+  songAVotes: number;
+  songBVotes: number;
+  selectedSongId: string | null;
 }
 
 export interface Profile {
   userId: string;
   displayName: string | null;
   role: UserRole;
+  createdAt: string;
+  currentStreak: number;
+  longestStreak: number;
+  totalVotes: number;
+  lastVoteDay: string | null;
 }
 
-export interface GameRun {
+export interface VoteHistory {
   id: string;
-  userId: string;
-  score: number;
-  startedAt: string;
-  endedAt: string;
-  seedContext: string | null;
-  displayName?: string | null;
-}
-
-export interface SongFilters {
-  category?: SongCategory | "all";
-  tag?: string;
-  query?: string;
-  musicalTitle?: string;
-}
-
-export interface RankPair {
-  left: Song;
-  right: Song;
-}
-
-export interface VoteResult {
-  ok: boolean;
-  message: string;
-}
-
-export interface SongSeed {
-  id: string;
+  created_at: string;
+  rating_delta: number;
+  matchup_day: string;
+  matchup_number: number;
   title: string;
-  musicalTitle: string;
-  category: SongCategory;
-  artistLabel: string;
-  artworkUrl: string | null;
-  youtubeUrl: string | null;
-  releaseYear: number;
-  tags: string[];
-  eloRating?: number;
-  voteCount?: number;
-  status?: SongStatus;
+  artist_name: string;
+  genre: string | null;
+  agreement: number;
+}
+export interface SongMatchupHistory {
+  matchup_day: string;
+  song_a_title: string;
+  song_b_title: string;
+  song_a_votes: number;
+  song_b_votes: number;
+}
+
+export interface ViewerState {
+  user: { id: string; email?: string } | null;
+  profile: Profile | null;
+  isAdmin: boolean;
 }

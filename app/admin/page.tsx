@@ -1,144 +1,190 @@
-import { adminToggleSong, adminUpsertSong } from "@/app/actions";
-import { getAdminSongs, getViewerState, isDemoMode } from "@/lib/data";
+import {
+  importSongs,
+  scheduleMatchup,
+  updateKFactor,
+  updateSongStatus,
+} from "@/app/actions";
+import { getAdminData } from "@/lib/data";
+import { requireAdmin } from "@/lib/auth";
 
-export default async function AdminPage({
+const example = [
+  {
+    id: "respect-aretha",
+    title: "Respect",
+    artistName: "Aretha Franklin",
+    albumName: "I Never Loved a Man the Way I Love You",
+    releaseYear: 1967,
+    genre: "Soul",
+    status: "active",
+    providers: [
+      {
+        provider: "youtube",
+        providerSongId: "JzqGZjFnYnA",
+        externalUrl: "https://www.youtube.com/watch?v=JzqGZjFnYnA",
+      },
+    ],
+  },
+];
+export default async function Admin({
   searchParams,
 }: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  const [params, viewer, songs] = await Promise.all([
-    searchParams,
-    getViewerState(),
-    getAdminSongs(),
-  ]);
-
-  const message = typeof params.message === "string" ? params.message : null;
-  const demoMode = isDemoMode();
-
-  if (demoMode) {
-    return (
-      <div className="notice-panel">
-        <strong>Admin mode needs a live Supabase project.</strong>
-        <p>
-          The schema and seed files are included in this repo. Once env vars are
-          configured and your profile is marked as admin, this page becomes fully
-          interactive.
-        </p>
-      </div>
-    );
-  }
-
-  if (!viewer.user || !viewer.isAdmin) {
-    return (
-      <div className="notice-panel">
-        <strong>Admin access required.</strong>
-        <p>Sign in with an admin account to manage the catalog.</p>
-      </div>
-    );
-  }
-
+  await requireAdmin();
+  const [data, params] = await Promise.all([getAdminData(), searchParams]);
+  const playable = data.songs.filter(
+    (s) =>
+      s.status === "active" &&
+      s.providers.some((p) => p.provider !== "musicbrainz"),
+  );
   return (
-    <div className="stack-xl">
-      <section className="page-intro">
-        <div>
-          <span className="eyebrow">Admin</span>
-          <h1>Manage the catalog.</h1>
-          <p>
-            Add canonical songs, keep metadata clean, and deactivate entries that
-            should not appear in rankings or game rounds.
-          </p>
-        </div>
+    <section className="page">
+      <header className="page-title">
+        <p className="kicker">Editorial tools</p>
+        <h1>Make tomorrow’s choice.</h1>
+      </header>
+      {params.message ? (
+        <p className="notice" role="status">
+          {params.message}
+        </p>
+      ) : null}
+      <section className="panel">
+        <h2>Schedule or replace a future matchup</h2>
+        <form action={scheduleMatchup} className="admin-form">
+          <label>
+            Replace upcoming matchup (optional)
+            <select name="replaceId">
+              <option value="">Create a new matchup</option>
+              {data.matchups
+                .filter((m) => Date.parse(m.starts_at) > Date.now())
+                .map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.matchup_day}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <label>
+            Musicale day (UTC)
+            <input
+              name="day"
+              type="date"
+              min={new Date().toISOString().slice(0, 10)}
+              required
+            />
+          </label>
+          <label>
+            Song A
+            <select name="songA" required>
+              {playable.map((s) => (
+                <option value={s.id} key={s.id}>
+                  {s.title} — {s.artistName}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Song B
+            <select name="songB" required defaultValue={playable[1]?.id}>
+              {playable.map((s) => (
+                <option value={s.id} key={s.id}>
+                  {s.title} — {s.artistName}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button className="button" disabled={playable.length < 2}>
+            Save matchup
+          </button>
+        </form>
       </section>
-
-      {message ? <div className="banner success">{message}</div> : null}
-
-      <section className="dashboard-grid">
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <span className="eyebrow">Create or update</span>
-              <h2>Song editor</h2>
-            </div>
-          </div>
-          <form action={adminUpsertSong} className="stack">
-            <label className="field">
-              <span>Optional id</span>
-              <input name="id" placeholder="leave blank to auto-generate" />
-            </label>
-            <label className="field">
-              <span>Title</span>
-              <input name="title" required />
-            </label>
-            <label className="field">
-              <span>Musical title</span>
-              <input name="musicalTitle" required />
-            </label>
-            <label className="field">
-              <span>Category</span>
-              <select name="category">
-                <option value="broadway">Broadway</option>
-                <option value="movie">Movie musical</option>
+      <section className="panel">
+        <h2>Scheduled matchups and vote counts</h2>
+        {data.matchups.length ? (
+          <ul>
+            {data.matchups.map((m) => (
+              <li key={m.id}>
+                {m.matchup_day} · {m.song_a_id} vs {m.song_b_id} ·{" "}
+                {m.song_a_votes + m.song_b_votes} votes · {m.status}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No upcoming matchups.</p>
+        )}
+      </section>
+      <section className="panel">
+        <h2>Add, edit or import songs</h2>
+        <p>
+          Paste a JSON array (1–100 songs). Existing IDs update metadata and
+          providers while preserving ratings. Use official provider links;
+          verify the upload before scheduling it. Imports are atomic.
+        </p>
+        <form action={importSongs} className="admin-form">
+          <label>
+            Catalog JSON
+            <textarea
+              name="catalog"
+              rows={12}
+              required
+              defaultValue={JSON.stringify(example, null, 2)}
+            />
+          </label>
+          <button className="button">Save catalog</button>
+        </form>
+      </section>
+      <section className="panel">
+        <h2>Song availability</h2>
+        {data.songs.map((s) => (
+          <form key={s.id} action={updateSongStatus} className="status-form">
+            <input type="hidden" name="id" value={s.id} />
+            <span>
+              {s.title} — {s.artistName}
+            </span>
+            <label>
+              <span className="sr-only">Status for {s.title}</span>
+              <select name="status" defaultValue={s.status}>
+                <option value="active">Active</option>
+                <option value="unavailable">Unavailable</option>
+                <option value="disabled">Disabled</option>
               </select>
             </label>
-            <label className="field">
-              <span>Artist/cast label</span>
-              <input name="artistLabel" required />
-            </label>
-            <label className="field">
-              <span>Artwork URL</span>
-              <input name="artworkUrl" />
-            </label>
-            <label className="field">
-              <span>YouTube URL</span>
-              <input name="youtubeUrl" />
-            </label>
-            <label className="field">
-              <span>Release year</span>
-              <input min="1900" name="releaseYear" required type="number" />
-            </label>
-            <label className="field">
-              <span>Tags</span>
-              <input name="tags" placeholder="anthem, duet, finale" />
-            </label>
-            <button className="primary-button" type="submit">
-              Save song
-            </button>
+            <button className="button secondary">Save</button>
           </form>
-        </article>
-
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <span className="eyebrow">Catalog status</span>
-              <h2>Active and inactive songs</h2>
-            </div>
-          </div>
-          <div className="table">
-            {songs.map((song) => (
-              <div className="table-row rich" key={song.id}>
-                <div>
-                  <strong>{song.title}</strong>
-                  <p>
-                    {song.musicalTitle} • {song.status}
-                  </p>
-                </div>
-                <span>{Math.round(song.eloRating)} Elo</span>
-                <form action={adminToggleSong}>
-                  <input name="songId" type="hidden" value={song.id} />
-                  <input
-                    name="nextStatus"
-                    type="hidden"
-                    value={song.status === "active" ? "inactive" : "active"}
-                  />
-                  <button className="ghost-button" type="submit">
-                    {song.status === "active" ? "Deactivate" : "Activate"}
-                  </button>
-                </form>
-              </div>
-            ))}
-          </div>
-        </article>
+        ))}
       </section>
-    </div>
+      <section className="panel">
+        <h2>Elo settings</h2>
+        <form action={updateKFactor} className="admin-form">
+          <label>
+            K-factor (future votes)
+            <input
+              name="kFactor"
+              type="number"
+              min="1"
+              max="100"
+              required
+              defaultValue={data.kFactor}
+            />
+          </label>
+          <button className="button">Save K-factor</button>
+        </form>
+      </section>
+      <section className="panel">
+        <h2>Recent editorial changes</h2>
+        {data.audit.length ? (
+          <ul>
+            {data.audit.map((a) => (
+              <li key={a.id}>
+                {a.created_at.slice(0, 16)} UTC · {a.operation} {a.entity} ·{" "}
+                {a.entity_id}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No editorial changes yet.</p>
+        )}
+      </section>
+    </section>
   );
 }

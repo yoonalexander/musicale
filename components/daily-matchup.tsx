@@ -1,0 +1,194 @@
+"use client";
+import { useState } from "react";
+import { useFormStatus } from "react-dom";
+import { submitDailyVote } from "@/app/actions";
+import { providerLabels } from "@/lib/providers";
+import { resultMessage, shareResult } from "@/lib/share";
+import type { Matchup, Song } from "@/types/domain";
+
+function VoteButton({ title, disabled }: { title: string; disabled: boolean }) {
+  const { pending } = useFormStatus();
+  return (
+    <button className="button" disabled={disabled || pending}>
+      {pending ? "Recording…" : `Vote for ${title}`}
+    </button>
+  );
+}
+function Card({
+  song,
+  matchup,
+  disabled,
+}: {
+  song: Song;
+  matchup: Matchup;
+  disabled: boolean;
+}) {
+  const chosen = matchup.selectedSongId === song.id;
+  return (
+    <article
+      className={`song-choice ${chosen ? "chosen" : matchup.selectedSongId ? "unselected" : ""}`}
+    >
+      <div className="art">
+        {song.artworkUrl ? (
+          <img
+            src={song.artworkUrl}
+            alt={`${song.title} album artwork`}
+            width="600"
+            height="600"
+          />
+        ) : (
+          <span aria-hidden="true">{song.title[0]}</span>
+        )}
+      </div>
+      <p className="kicker">
+        {song.albumName} · {song.releaseYear}
+        {song.genre ? ` · ${song.genre}` : ""}
+      </p>
+      <h2>{song.title}</h2>
+      <p>{song.artistName}</p>
+      {chosen ? <p className="selected-label">Your pick ✓</p> : null}
+      <div className="card-actions">
+        {song.providers.length ? (
+          song.providers.map((p) => (
+            <a
+              key={p.provider}
+              className="button secondary"
+              href={p.externalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {p.provider === "musicbrainz" ? "View on" : "Listen on"}{" "}
+              {providerLabels[p.provider]}
+            </a>
+          ))
+        ) : (
+          <span>Playback unavailable</span>
+        )}
+        <form action={submitDailyVote}>
+          <input type="hidden" name="matchupId" value={matchup.id} />
+          <input type="hidden" name="selectedSongId" value={song.id} />
+          <VoteButton title={song.title} disabled={disabled} />
+        </form>
+      </div>
+    </article>
+  );
+}
+export function DailyMatchup({
+  matchup,
+  canVote,
+  streak = 0,
+}: {
+  matchup: Matchup;
+  canVote: boolean;
+  streak?: number;
+}) {
+  const voted = Boolean(matchup.selectedSongId);
+  const agreedVotes =
+    matchup.selectedSongId === matchup.songA.id
+      ? matchup.songAVotes
+      : matchup.songBVotes;
+  const pct = matchup.totalVotes
+    ? Math.round(
+        (100 *
+          (matchup.selectedSongId === matchup.songA.id
+            ? matchup.songAVotes
+            : matchup.songBVotes)) /
+          matchup.totalVotes,
+      )
+    : 0;
+  return (
+    <>
+      <div className="matchup">
+        <Card
+          song={matchup.songA}
+          matchup={matchup}
+          disabled={!canVote || voted}
+        />
+        <div className="versus" aria-hidden="true">
+          VS
+        </div>
+        <Card
+          song={matchup.songB}
+          matchup={matchup}
+          disabled={!canVote || voted}
+        />
+      </div>
+      {voted ? (
+        <section className="result" aria-live="polite">
+          <p className="kicker">Vote recorded</p>
+          <h2>{pct}% chose the same song.</h2>
+          <p>
+            {resultMessage(
+              matchup.totalVotes ? (100 * agreedVotes) / matchup.totalVotes : 0,
+            )}{" "}
+            {matchup.totalVotes}{" "}
+            {matchup.totalVotes === 1 ? "listener has" : "listeners have"} voted
+            so far.
+          </p>
+          <p>
+            Your current streak:{" "}
+            <strong>
+              {streak} {streak === 1 ? "day" : "days"}
+            </strong>
+            .
+          </p>
+          <p>Come back tomorrow for a new matchup.</p>
+          <Share matchup={matchup} percent={pct} streak={streak} />
+        </section>
+      ) : null}
+    </>
+  );
+}
+function Share({
+  matchup,
+  percent,
+  streak,
+}: {
+  matchup: Matchup;
+  percent: number;
+  streak: number;
+}) {
+  const [status, setStatus] = useState("");
+  const [fallback, setFallback] = useState(false);
+  const text = shareResult(matchup.number, percent, streak);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      setStatus("Result copied.");
+    } catch {
+      setFallback(true);
+      setStatus("Select and copy your result below.");
+    }
+  }
+  async function share() {
+    if (navigator.share) {
+      try {
+        await navigator.share({ text });
+        setStatus("Result shared.");
+      } catch (e) {
+        if ((e as Error).name !== "AbortError") await copy();
+      }
+    } else await copy();
+  }
+  return (
+    <>
+      <div className="share-actions">
+        <button className="button secondary" onClick={share}>
+          Share result
+        </button>
+        <button className="button secondary" onClick={copy}>
+          Copy spoiler-free result
+        </button>
+      </div>
+      <p role="status">{status}</p>
+      {fallback ? (
+        <textarea
+          aria-label="Share result"
+          readOnly
+          value={text}
+          onFocus={(e) => e.currentTarget.select()}
+        />
+      ) : null}
+    </>
+  );
+}
