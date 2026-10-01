@@ -564,3 +564,56 @@ textarea:focus-visible {
     animation: none;
   }
 }
+
+.leader-filters {
+  flex-wrap: wrap;
+}
+.leader-filters label {
+  min-width: 140px;
+  flex: 1 1 160px;
+}
+.checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+}
+.checkbox-label input {
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  margin-top: 0.2rem;
+}
+.inline-form {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 0.6rem 0;
+}
+fieldset {
+  border: 1px solid var(--line);
+  min-width: 0;
+  padding: 1rem;
+}
+fieldset label {
+  margin-bottom: 0.7rem;
+}
+.panel {
+  overflow-wrap: anywhere;
+}
+.mini-art {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  background: var(--line);
+  font: 1.5rem var(--serif);
+}
+summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+footer {
+  flex-wrap: wrap;
+}

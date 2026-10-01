@@ -17,7 +17,7 @@ export default async function Leaderboard({
     10000,
     Math.max(1, Number.parseInt(params.page ?? "1") || 1),
   );
-  const sort: LeaderSort = ["rating", "wins", "votes"].includes(
+  const sort: LeaderSort = ["rating", "wins", "votes", "movement"].includes(
     params.sort ?? "",
   )
     ? (params.sort as LeaderSort)
@@ -26,9 +26,33 @@ export default async function Leaderboard({
     100000,
     Math.max(0, Number.parseInt(params.minimum ?? "0") || 0),
   );
-  const { songs, total } = await getLeaderboard(page, sort, minimum);
-  const link = (p: number) =>
-    `/leaderboard?page=${p}&sort=${sort}&minimum=${minimum}` as Route;
+  const genre = (params.genre ?? "").trim().slice(0, 100),
+    artist = (params.artist ?? "").trim().slice(0, 200);
+  const year = Number(params.year),
+    decade = Number(params.decade);
+  const filters = {
+    genre,
+    artist,
+    year:
+      Number.isInteger(year) && year >= 1860 && year <= 2200 ? year : undefined,
+    decade:
+      Number.isInteger(decade) &&
+      decade >= 1860 &&
+      decade <= 2200 &&
+      decade % 10 === 0
+        ? decade
+        : undefined,
+  };
+  const { songs, total } = await getLeaderboard(page, sort, minimum, filters);
+  const query = new URLSearchParams({
+    sort,
+    minimum: String(minimum),
+    genre,
+    artist,
+    year: filters.year ? String(filters.year) : "",
+    decade: filters.decade ? String(filters.decade) : "",
+  });
+  const link = (p: number) => `/leaderboard?${query}&page=${p}` as Route;
   return (
     <section className="page">
       <header className="page-title">
@@ -51,6 +75,7 @@ export default async function Leaderboard({
             <option value="rating">Elo rating</option>
             <option value="wins">Win percentage</option>
             <option value="votes">Total votes</option>
+            <option value="movement">Rating movement · 7 days</option>
           </select>
         </label>
         <label>
@@ -63,7 +88,47 @@ export default async function Leaderboard({
             defaultValue={minimum}
           />
         </label>
+        <label>
+          Genre
+          <input
+            name="genre"
+            maxLength={100}
+            defaultValue={genre}
+            placeholder="e.g. Soul"
+          />
+        </label>
+        <label>
+          Artist
+          <input
+            name="artist"
+            maxLength={200}
+            defaultValue={artist}
+            placeholder="Name contains…"
+          />
+        </label>
+        <label>
+          Release year
+          <input
+            name="year"
+            type="number"
+            min="1860"
+            max="2200"
+            defaultValue={filters.year}
+          />
+        </label>
+        <label>
+          Decade
+          <select name="decade" defaultValue={filters.decade ?? ""}>
+            <option value="">All decades</option>
+            {Array.from({ length: 35 }, (_, i) => 1860 + i * 10).map((d) => (
+              <option key={d} value={d}>
+                {d}s
+              </option>
+            ))}
+          </select>
+        </label>
         <button className="button secondary">Apply</button>
+        <Link href="/leaderboard">Clear filters</Link>
       </form>
       <div className="leaderboard">
         <div className="leader-head">
@@ -83,8 +148,13 @@ export default async function Leaderboard({
                   width="48"
                   height="48"
                   loading="lazy"
+                  referrerPolicy="no-referrer"
                 />
-              ) : null}
+              ) : (
+                <span className="mini-art" aria-hidden="true">
+                  {s.title[0]}
+                </span>
+              )}
               <div>
                 <strong>{s.title}</strong>
                 <small>
@@ -105,6 +175,12 @@ export default async function Leaderboard({
             <b>
               {Math.round(s.eloRating)}
               {s.matchupCount < 5 ? <small>Provisional</small> : null}
+              {sort === "movement" ? (
+                <small>
+                  {(s.recentMovement ?? 0) > 0 ? "+" : ""}
+                  {Math.round(s.recentMovement ?? 0)} this week
+                </small>
+              ) : null}
             </b>
           </Link>
         ))}

@@ -1,6 +1,8 @@
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
+import { createClient } from "@supabase/supabase-js";
 import { demoMatchup, demoSongs } from "@/lib/catalog";
-import { isSupabaseConfigured } from "@/lib/env";
+import { env, isSupabaseConfigured } from "@/lib/env";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { currentStreak } from "@/lib/elo";
 import { mapProviders } from "@/lib/providers";
@@ -29,6 +31,9 @@ function mapSong(r: Record<string, unknown>): Song {
     albumName: String(r.album_name ?? "Single"),
     artworkUrl: r.artwork_url as string | null,
     releaseYear: Number(r.release_year),
+    releaseDate: r.release_date as string | null,
+    durationMs: r.duration_ms ? Number(r.duration_ms) : null,
+    recentMovement: Number(r.recent_movement ?? 0),
     genre: r.genre as string | null,
     eloRating: Number(r.elo_rating),
     wins: Number(r.wins),
@@ -98,36 +103,81 @@ export async function getTodayMatchup(): Promise<Matchup | null> {
 }
 
 export const pageSize = 25;
-export type LeaderSort = "rating" | "wins" | "votes";
-export async function getLeaderboard(
+export type LeaderSort = "rating" | "wins" | "votes" | "movement";
+export type LeaderFilters = {
+  genre?: string;
+  artist?: string;
+  year?: number;
+  decade?: number;
+};
+async function fetchLeaderboard(
   page = 1,
   sort: LeaderSort = "rating",
   minimum = 0,
+  filters: LeaderFilters = {},
 ) {
   if (!isSupabaseConfigured()) {
-    const filtered = [...demoSongs].filter((s) => s.matchupCount >= minimum);
+    const filtered = [...demoSongs].filter(
+      (s) =>
+        s.matchupCount >= minimum &&
+        (!filters.genre || s.genre === filters.genre) &&
+        (!filters.artist ||
+          s.artistName.toLowerCase().includes(filters.artist.toLowerCase())) &&
+        (!filters.year || s.releaseYear === filters.year) &&
+        (!filters.decade ||
+          Math.floor(s.releaseYear / 10) * 10 === filters.decade),
+    );
+    filtered.sort(
+      (a, b) =>
+        (sort === "votes"
+          ? b.matchupCount - a.matchupCount
+          : sort === "wins"
+            ? b.wins / (b.matchupCount || 1) - a.wins / (a.matchupCount || 1)
+            : b.eloRating - a.eloRating) || a.id.localeCompare(b.id),
+    );
     return {
       songs: filtered.slice((page - 1) * pageSize, page * pageSize),
       total: filtered.length,
     };
   }
-  const db = await getSupabaseServerClient();
+  // This cache contains only public catalog data; never use cookies or a viewer session here.
+  const db = createClient(env.supabaseUrl!, env.supabaseAnonKey!, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
   const column = {
     rating: "elo_rating",
     wins: "win_percentage",
     votes: "matchup_count",
+    movement: "recent_movement",
   }[sort];
-  const { data, error, count } = await db!
+  let query = db!
     .from("song_catalog")
     .select("*", { count: "exact" })
     .eq("status", "active")
-    .gte("matchup_count", minimum)
+    .gte("matchup_count", minimum);
+  if (filters.genre) query = query.eq("genre", filters.genre);
+  if (filters.artist)
+    query = query.ilike(
+      "artist_name",
+      `%${filters.artist.replace(/[%_\\]/g, "\\$&")}%`,
+    );
+  if (filters.year) query = query.eq("release_year", filters.year);
+  if (filters.decade)
+    query = query
+      .gte("release_year", filters.decade)
+      .lt("release_year", filters.decade + 10);
+  const { data, error, count } = await query
     .order(column, { ascending: false })
     .order("id")
     .range((page - 1) * pageSize, page * pageSize - 1);
   check(error);
   return { songs: (data ?? []).map(mapSong), total: count ?? 0 };
 }
+export const getLeaderboard = unstable_cache(
+  fetchLeaderboard,
+  ["public-leaderboard", env.supabaseUrl ?? "preview"],
+  { revalidate: 30, tags: ["leaderboard"] },
+);
 export async function getSong(id: string) {
   if (!isSupabaseConfigured()) {
     const song = demoSongs.find((s) => s.id === id);
@@ -177,27 +227,100 @@ export async function getSongHistory(id: string) {
 }
 export async function getAdminData() {
   const db = await getSupabaseServerClient();
-  const [songs, matchups, settings, audit] = await Promise.all([
-    db!.from("song_catalog").select("*").order("title").limit(1000),
-    db!
-      .from("daily_matchups")
-      .select("*")
-      .gte("matchup_day", new Date().toISOString().slice(0, 10))
-      .order("matchup_day")
-      .limit(30),
-    db!.from("app_settings").select("elo_k_factor").single(),
-    db!
-      .from("admin_audit_log")
-      .select("id,entity,entity_id,operation,created_at")
-      .order("created_at", { ascending: false })
-      .limit(20),
-  ]);
-  [songs, matchups, settings, audit].forEach((r) => check(r.error));
+  const [songs, matchups, settings, audit, overview, events] =
+    await Promise.all([
+      db!.from("song_catalog").select("*").order("title").limit(1000),
+      db!
+        .from("daily_matchups")
+        .select("*")
+        .gte(
+          "matchup_day",
+          new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10),
+        )
+        .order("matchup_day")
+        .limit(90),
+      db!.from("app_settings").select("elo_k_factor").single(),
+      db!
+        .from("admin_audit_log")
+        .select("id,entity,entity_id,operation,created_at")
+        .order("created_at", { ascending: false })
+        .limit(20),
+      db!.rpc("get_admin_overview"),
+      db!
+        .from("product_event_counts")
+        .select("*")
+        .order("event_day", { ascending: false })
+        .limit(240),
+    ]);
+  [songs, matchups, settings, audit, overview, events].forEach((r) =>
+    check(r.error),
+  );
   return {
     songs: (songs.data ?? []).map(mapSong),
     matchups: matchups.data ?? [],
     kFactor: settings.data!.elo_k_factor,
     audit: audit.data ?? [],
+    overview: overview.data as AdminOverview,
+    events: (events.data ?? []) as {
+      event_day: string;
+      event: string;
+      count: number;
+    }[],
   };
+}
+export interface ProfileData {
+  total: number;
+  history: VoteHistory[];
+  stats: {
+    sample: number;
+    majority: number;
+    artists: { label: string; count: number }[];
+    genres: { label: string; count: number }[];
+    picks: {
+      song_id: string;
+      title: string;
+      artist_name: string;
+      count: number;
+    }[];
+    controversial: {
+      title: string;
+      artist_name: string;
+      matchup_day: string;
+      agreement: number;
+    }[];
+  };
+}
+export interface AdminOverview {
+  accounts: number;
+  votes: number;
+  todayVotes: number;
+  daily: { matchup_day: string; votes: number; status: string }[];
+  suspicious: { user_id: string; attempts: number; limited_minutes: number }[];
+}
+export async function getProfileData(page = 1): Promise<ProfileData> {
+  const db = await getSupabaseServerClient();
+  const { data, error } = await db!.rpc("get_my_profile_data", {
+    p_offset: (page - 1) * 25,
+  });
+  check(error);
+  return data;
+}
+export async function getFeaturedMatchups(): Promise<
+  {
+    matchup_day: string;
+    matchup_number: number;
+    song_a_id: string;
+    song_a_title: string;
+    song_b_id: string;
+    song_b_title: string;
+    song_a_votes: number;
+    song_b_votes: number;
+  }[]
+> {
+  if (!isSupabaseConfigured()) return [];
+  const db = await getSupabaseServerClient();
+  const { data, error } = await db!.rpc("get_featured_matchups");
+  check(error);
+  return data ?? [];
 }
 export const isDemoMode = () => !isSupabaseConfigured();

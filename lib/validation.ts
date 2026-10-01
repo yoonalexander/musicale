@@ -30,6 +30,9 @@ export interface SongInput {
   genre: string | null;
   status: "active" | "unavailable" | "disabled";
   providers: SongProvider[];
+  releaseDate: string | null;
+  durationMs: number | null;
+  artworkUrl: string | null;
 }
 export function validateSong(value: unknown): SongInput {
   if (!value || typeof value !== "object")
@@ -51,6 +54,10 @@ export function validateSong(value: unknown): SongInput {
     throw new Error("Invalid song status.");
   const providers = Array.isArray(r.providers)
     ? r.providers.map((p) => {
+        if (!p || typeof p !== "object")
+          throw new Error(
+            "Each provider must include an ID and official link.",
+          );
         const url = safeProviderUrl(p.provider, p.externalUrl);
         const id = String(p.providerSongId ?? "").trim();
         if (!url || !id || id.length > 200)
@@ -68,6 +75,41 @@ export function validateSong(value: unknown): SongInput {
     throw new Error("Use each provider only once per song.");
   if (providers.length > 4)
     throw new Error("Use up to four supported providers.");
+  const releaseDate = r.releaseDate ? String(r.releaseDate) : null;
+  if (
+    releaseDate &&
+    (!validDay(releaseDate) || Number(releaseDate.slice(0, 4)) !== releaseYear)
+  )
+    throw new Error(
+      "Release date must be a real date matching the release year.",
+    );
+  const durationMs =
+    r.durationMs === undefined || r.durationMs === null || r.durationMs === ""
+      ? null
+      : Number(r.durationMs);
+  if (
+    durationMs !== null &&
+    (!Number.isInteger(durationMs) ||
+      durationMs < 1000 ||
+      durationMs > 86400000)
+  )
+    throw new Error("Duration must be between 1 second and 24 hours.");
+  const artworkUrl = r.artworkUrl ? String(r.artworkUrl).trim() : null;
+  if (artworkUrl) {
+    let url: URL;
+    try {
+      url = new URL(artworkUrl);
+    } catch {
+      throw new Error("Artwork needs a valid HTTPS URL.");
+    }
+    if (
+      url.protocol !== "https:" ||
+      url.username ||
+      url.password ||
+      artworkUrl.length > 2000
+    )
+      throw new Error("Artwork needs a valid HTTPS URL without credentials.");
+  }
   return {
     id: songId(String(r.id ?? "")),
     title,
@@ -77,5 +119,8 @@ export function validateSong(value: unknown): SongInput {
     genre: r.genre ? String(r.genre).slice(0, 100) : null,
     status: status as SongInput["status"],
     providers,
+    releaseDate,
+    durationMs,
+    artworkUrl,
   };
 }

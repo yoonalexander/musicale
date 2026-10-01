@@ -11,6 +11,11 @@ export default defineConfig({
   use: { baseURL: "http://127.0.0.1:3100", trace: "retain-on-failure" },
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
+    ...(process.platform !== "win32" ||
+    process.env.MUSICALE_INCLUDE_FIREFOX === "1"
+      ? [{ name: "firefox", use: { ...devices["Desktop Firefox"] } }]
+      : []),
+    { name: "webkit", use: { ...devices["Desktop Safari"] } },
     {
       name: "mobile",
       use: { ...devices["iPhone 13"], defaultBrowserType: "chromium" },

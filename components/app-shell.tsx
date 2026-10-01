@@ -34,6 +34,8 @@ export function AppShell({
       <footer>
         <span>Musicale</span>
         <span>Music playback remains with its provider.</span>
+        <Link href="/archive">Featured matchups</Link>
+        <Link href="/privacy">Privacy & analytics</Link>
       </footer>
     </>
   );

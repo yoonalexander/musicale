@@ -1,6 +1,6 @@
 "use server";
 import type { Route } from "next";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSiteUrl, isSupabaseConfigured } from "@/lib/env";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
@@ -12,6 +12,21 @@ import {
   type SongInput,
 } from "@/lib/validation";
 import { requireAdmin } from "@/lib/auth";
+import { parseCatalog } from "@/lib/import";
+import editorialPairs from "@/data/editorial-pairs.json";
+
+async function requestBudget(action: "admin" | "profile") {
+  const db = await getSupabaseServerClient();
+  const { data, error } = await db!.rpc("reserve_request", {
+    p_action: action,
+  });
+  if (error || !data)
+    go(
+      action === "admin" ? "/admin" : "/profile",
+      "message",
+      "Too many requests. Try again next minute.",
+    );
+}
 
 const go = (path: string, key: string, value: string): never =>
   redirect(`${path}?${key}=${encodeURIComponent(value)}` as Route);
@@ -52,34 +67,38 @@ export async function submitDailyVote(fd: FormData) {
   )
     go("/today", "error", "Invalid vote. Reload today’s matchup.");
   const db = await getSupabaseServerClient();
-  const { error } = await db!.rpc("submit_daily_vote", {
+  const { error, data } = await db!.rpc("submit_daily_vote", {
     p_matchup_id: matchupId,
     p_selected_song_id: selectedSongId,
   });
-  if (error) {
+  if (error || data?.error) {
+    const message = error?.message ?? String(data.error);
     const known = [
       "already voted",
       "not active",
       "not in this matchup",
       "Both songs must be active",
       "Playback is unavailable",
+      "Too many vote attempts",
     ];
     go(
       "/today",
       "error",
-      known.some((s) => error.message.includes(s))
-        ? error.message
+      known.some((s) => message.includes(s))
+        ? message
         : "Could not record your vote. Please try again.",
     );
   }
   revalidatePath("/today");
   revalidatePath("/leaderboard");
+  revalidateTag("leaderboard");
   revalidatePath("/profile");
   revalidatePath("/songs/[id]", "page");
   redirect("/today");
 }
 export async function scheduleMatchup(fd: FormData) {
   const v = await requireAdmin();
+  await requestBudget("admin");
   let values;
   try {
     const day = String(fd.get("day") ?? "");
@@ -125,17 +144,19 @@ export async function scheduleMatchup(fd: FormData) {
 }
 export async function importSongs(fd: FormData) {
   await requireAdmin();
+  await requestBudget("admin");
   let songs: SongInput[] = [];
   try {
-    const text = String(fd.get("catalog") ?? "");
-    if (text.length > 200000)
+    const file = fd.get("file");
+    if (file instanceof File && file.size > 200000)
       throw new Error("Import must be smaller than 200 KB.");
-    const rows = JSON.parse(text);
-    if (!Array.isArray(rows) || rows.length < 1 || rows.length > 100)
-      throw new Error("Import 1 to 100 songs at a time.");
-    songs = rows.map(validateSong);
-    if (new Set(songs.map((s) => s.id)).size !== songs.length)
-      throw new Error("Duplicate song IDs in import.");
+    const text =
+      file instanceof File && file.size
+        ? await file.text()
+        : String(fd.get("catalog") ?? "");
+    songs = parseCatalog(text, String(fd.get("format") ?? "json"));
+    if (songs.some((s) => s.artworkUrl) && fd.get("artworkPermission") !== "on")
+      throw new Error("Confirm permission to display supplied artwork.");
   } catch (error) {
     go(
       "/admin",
@@ -149,6 +170,7 @@ export async function importSongs(fd: FormData) {
   const { error } = await db!.rpc("save_catalog", { p_songs: songs });
   revalidatePath("/admin");
   revalidatePath("/leaderboard");
+  revalidateTag("leaderboard");
   revalidatePath("/today");
   revalidatePath("/songs/[id]", "page");
   go(
@@ -161,6 +183,7 @@ export async function importSongs(fd: FormData) {
 }
 export async function updateSongStatus(fd: FormData) {
   await requireAdmin();
+  await requestBudget("admin");
   const status = String(fd.get("status"));
   if (!["active", "unavailable", "disabled"].includes(status))
     go("/admin", "message", "Invalid status.");
@@ -178,6 +201,7 @@ export async function updateSongStatus(fd: FormData) {
   revalidatePath("/admin");
   revalidatePath("/today");
   revalidatePath("/leaderboard");
+  revalidateTag("leaderboard");
   go(
     "/admin",
     "message",
@@ -186,6 +210,7 @@ export async function updateSongStatus(fd: FormData) {
 }
 export async function updateKFactor(fd: FormData) {
   await requireAdmin();
+  await requestBudget("admin");
   const k = Number(fd.get("kFactor"));
   if (!Number.isInteger(k) || k < 1 || k > 100)
     go("/admin", "message", "K-factor must be an integer between 1 and 100.");
@@ -199,5 +224,141 @@ export async function updateKFactor(fd: FormData) {
     "/admin",
     "message",
     error ? "Could not save K-factor." : "K-factor saved for future votes.",
+  );
+}
+export async function saveSong(fd: FormData) {
+  await requireAdmin();
+  await requestBudget("admin");
+  let song!: SongInput;
+  try {
+    const providers = [
+      "youtube",
+      "spotify",
+      "apple_music",
+      "musicbrainz",
+    ].flatMap((provider) => {
+      const externalUrl = String(fd.get(`${provider}Url`) ?? "").trim();
+      const providerSongId = String(fd.get(`${provider}Id`) ?? "").trim();
+      return externalUrl || providerSongId
+        ? [{ provider, externalUrl, providerSongId }]
+        : [];
+    });
+    song = validateSong({ ...Object.fromEntries(fd), providers });
+    if (song.artworkUrl && fd.get("artworkPermission") !== "on")
+      throw new Error("Confirm permission to display supplied artwork.");
+  } catch (error) {
+    go("/admin", "message", (error as Error).message);
+  }
+  const db = await getSupabaseServerClient();
+  const { error } = await db!.rpc("save_catalog", { p_songs: [song] });
+  ["/admin", "/today", "/leaderboard"].forEach((p) => revalidatePath(p));
+  revalidateTag("leaderboard");
+  revalidatePath("/songs/[id]", "page");
+  go(
+    "/admin",
+    "message",
+    error
+      ? "Song could not be saved. Check for duplicate provider IDs."
+      : "Song saved.",
+  );
+}
+export async function updateDisplayName(fd: FormData) {
+  const v = await getViewerState();
+  if (!v.user) redirect("/login");
+  await requestBudget("profile");
+  const name = String(fd.get("displayName") ?? "").trim();
+  if (!name || name.length > 80 || /[\u0000-\u001f\u007f]/.test(name))
+    go("/profile", "message", "Use a name of 1 to 80 characters.");
+  const db = await getSupabaseServerClient();
+  const { error } = await db!.rpc("update_my_display_name", { p_name: name });
+  revalidatePath("/profile");
+  go(
+    "/profile",
+    "message",
+    error ? "Could not save display name." : "Display name saved.",
+  );
+}
+export async function manageMatchup(fd: FormData) {
+  await requireAdmin();
+  await requestBudget("admin");
+  const db = await getSupabaseServerClient();
+  const id = String(fd.get("id") ?? "");
+  const operation = String(fd.get("operation"));
+  if (
+    !["feature", "cancel"].includes(operation) ||
+    !/^[0-9a-f-]{36}$/i.test(id)
+  )
+    go("/admin", "message", "Invalid matchup action.");
+  const query = db!
+    .from("daily_matchups")
+    .update(
+      operation === "feature"
+        ? { featured: fd.get("featured") === "on" }
+        : { status: "cancelled" },
+    )
+    .eq("id", id);
+  const { data, error } =
+    operation === "feature"
+      ? await query.select("id")
+      : await query
+          .gt("starts_at", new Date().toISOString())
+          .eq("song_a_votes", 0)
+          .eq("song_b_votes", 0)
+          .select("id");
+  revalidatePath("/admin");
+  revalidatePath("/archive");
+  revalidatePath("/today");
+  go(
+    "/admin",
+    "message",
+    error || !data?.length
+      ? "Could not update matchup. Only future unvoted matchups can be cancelled."
+      : operation === "feature"
+        ? "Featured setting saved."
+        : "Matchup cancelled.",
+  );
+}
+export async function rebuildRankings(fd: FormData) {
+  await requireAdmin();
+  await requestBudget("admin");
+  if (fd.get("confirm") !== "on")
+    go("/admin", "message", "Confirm the ranking rebuild first.");
+  const db = await getSupabaseServerClient();
+  const { data, error } = await db!.rpc("rebuild_rankings");
+  ["/admin", "/today", "/leaderboard", "/profile"].forEach((p) =>
+    revalidatePath(p),
+  );
+  revalidateTag("leaderboard");
+  revalidatePath("/songs/[id]", "page");
+  go(
+    "/admin",
+    "message",
+    error
+      ? "Rebuild failed. No rankings were changed; inspect the audit records."
+      : `Rankings rebuilt from ${data} recorded votes.`,
+  );
+}
+export async function scheduleEditorialWeek() {
+  await requireAdmin();
+  await requestBudget("admin");
+  const today = new Date().toISOString().slice(0, 10);
+  const matchups = editorialPairs.map((_, i) => {
+    const date = new Date(`${today}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + i + 1);
+    const [songA, songB] = editorialPairs[(i + 1) % editorialPairs.length];
+    return { day: date.toISOString().slice(0, 10), songA, songB };
+  });
+  const db = await getSupabaseServerClient();
+  const { data, error } = await db!.rpc("schedule_matchup_batch", {
+    p_matchups: matchups,
+  });
+  revalidatePath("/admin");
+  revalidatePath("/today");
+  go(
+    "/admin",
+    "message",
+    error
+      ? "Queue failed; no matchups were added. Import the starter catalog and ensure all selected songs are active with playback links."
+      : `${data} editorial matchups added. Existing days were preserved.`,
   );
 }

@@ -1,10 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { submitDailyVote } from "@/app/actions";
 import { providerLabels } from "@/lib/providers";
 import { resultMessage, shareResult } from "@/lib/share";
 import type { Matchup, Song } from "@/types/domain";
+import { track } from "@/lib/analytics";
 
 function VoteButton({ title, disabled }: { title: string; disabled: boolean }) {
   const { pending } = useFormStatus();
@@ -34,6 +35,7 @@ function Card({
             src={song.artworkUrl}
             alt={`${song.title} album artwork`}
             width="600"
+            referrerPolicy="no-referrer"
             height="600"
           />
         ) : (
@@ -46,6 +48,12 @@ function Card({
       </p>
       <h2>{song.title}</h2>
       <p>{song.artistName}</p>
+      {song.durationMs ? (
+        <p>
+          {Math.floor(song.durationMs / 60000)}:
+          {String(Math.floor(song.durationMs / 1000) % 60).padStart(2, "0")}
+        </p>
+      ) : null}
       {chosen ? <p className="selected-label">Your pick ✓</p> : null}
       <div className="card-actions">
         {song.providers.length ? (
@@ -56,6 +64,9 @@ function Card({
               href={p.externalUrl}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => {
+                if (p.provider !== "musicbrainz") track("preview_started");
+              }}
             >
               {p.provider === "musicbrainz" ? "View on" : "Listen on"}{" "}
               {providerLabels[p.provider]}
@@ -64,7 +75,14 @@ function Card({
         ) : (
           <span>Playback unavailable</span>
         )}
-        <form action={submitDailyVote}>
+        <form
+          action={submitDailyVote}
+          onSubmit={() => {
+            try {
+              sessionStorage.setItem("musicale-vote-pending", matchup.id);
+            } catch {}
+          }}
+        >
           <input type="hidden" name="matchupId" value={matchup.id} />
           <input type="hidden" name="selectedSongId" value={song.id} />
           <VoteButton title={song.title} disabled={disabled} />
@@ -83,6 +101,18 @@ export function DailyMatchup({
   streak?: number;
 }) {
   const voted = Boolean(matchup.selectedSongId);
+  useEffect(() => {
+    try {
+      if (
+        voted &&
+        sessionStorage.getItem("musicale-vote-pending") === matchup.id
+      ) {
+        sessionStorage.removeItem("musicale-vote-pending");
+        track("vote_submitted");
+        if (streak > 1) track("streak_continued");
+      }
+    } catch {}
+  }, [voted, matchup.id, streak]);
   const agreedVotes =
     matchup.selectedSongId === matchup.songA.id
       ? matchup.songAVotes
@@ -154,6 +184,7 @@ function Share({
   async function copy() {
     try {
       await navigator.clipboard.writeText(text);
+      track("share_copied");
       setStatus("Result copied.");
     } catch {
       setFallback(true);

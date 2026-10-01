@@ -20,6 +20,7 @@ export default async function SongPage({
           <img
             src={song.artworkUrl}
             alt={`${song.title} artwork`}
+            referrerPolicy="no-referrer"
             width="600"
             height="600"
           />
@@ -34,7 +35,11 @@ export default async function SongPage({
         </p>
         <h1>{song.title}</h1>
         <p className="subtitle">
-          {song.artistName} · {song.albumName} · {song.releaseYear}
+          {song.artistName} · {song.albumName} ·{" "}
+          {song.releaseDate ?? song.releaseYear}
+          {song.durationMs
+            ? ` · ${Math.floor(song.durationMs / 60000)}:${String(Math.floor(song.durationMs / 1000) % 60).padStart(2, "0")}`
+            : ""}
         </p>
         <div className="actions">
           {song.providers.map((p) => (

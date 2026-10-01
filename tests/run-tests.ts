@@ -8,6 +8,8 @@ import {
 import { safeProviderUrl, mapProviders } from "../lib/providers.ts";
 import { shareResult, resultMessage } from "../lib/share.ts";
 import { validateSong, utcWindow, validDay } from "../lib/validation.ts";
+import { parseCatalog, parseCsv } from "../lib/import.ts";
+import { readFileSync } from "node:fs";
 const run = (name: string, fn: () => void) => {
   fn();
   console.log(`PASS ${name}`);
@@ -127,4 +129,48 @@ run("share text includes streak and result without song spoilers", () => {
   assert.ok(!text.includes("Respect"));
   assert.ok(!text.includes("God Only Knows"));
   assert.equal(resultMessage(50), "An even split. Your vote counts.");
+});
+run(
+  "CSV parses quotes, commas, newlines and BOM without corrupting providers",
+  () => {
+    assert.deepEqual(parseCsv('\uFEFFa,b\r\n"a,b","two\nlines"\r\n'), [
+      ["a", "b"],
+      ["a,b", "two\nlines"],
+    ]);
+    assert.throws(() => parseCsv('a\n"unfinished'), /unfinished/);
+    const songs = parseCatalog(
+      readFileSync("public/catalog-template.csv", "utf8"),
+      "csv",
+    );
+    assert.equal(songs[0].id, "respect-aretha");
+    assert.equal(songs[0].providers[0].providerSongId, "JzqGZjFnYnA");
+    assert.throws(
+      () =>
+        parseCatalog(
+          "id,title,title,artistName,releaseYear\na,b,c,d,2000",
+          "csv",
+        ),
+      /Duplicate/,
+    );
+  },
+);
+run("catalog metadata validates dates, duration and HTTPS artwork", () => {
+  const song = {
+    id: "song",
+    title: "Title",
+    artistName: "Artist",
+    releaseYear: 2000,
+    releaseDate: "2000-02-29",
+    durationMs: 180000,
+    artworkUrl: "https://example.com/art.jpg",
+  };
+  assert.equal(validateSong(song).releaseDate, "2000-02-29");
+  for (const change of [
+    { releaseDate: "2001-01-01" },
+    { releaseDate: "2000-02-30" },
+    { durationMs: 0 },
+    { artworkUrl: "javascript:alert(1)" },
+    { artworkUrl: "https://user:pass@example.com/art" },
+  ])
+    assert.throws(() => validateSong({ ...song, ...change }));
 });

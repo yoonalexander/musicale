@@ -17,7 +17,7 @@ The unfinished changes originated in a July 12, 2026 request to replace the old 
 5. Return and see the saved selection; browse leaderboard, song rating history and profile vote history.
 6. Administer song metadata/import/status, editable future matchups, Elo settings and editorial audit records.
 
-The ten-song seed is a starter catalog; the initial two-song matchup has verified official playback links. Artwork permission, a larger catalog, extra analytics/social tools and production rollout remain distinct follow-up work.
+The original launch phases now also include full leaderboard filtering/movement, editable profiles and paginated statistics, CSV/file imports and a song editor, a twenty-song playback catalog and ten-day curated queue, featured archives, durable vote-attempt limits, activity review, aggregate opt-in analytics, ranking recovery, a health endpoint, and CI. See the README for thresholds and operational behavior. A larger editorial library, artwork permissions and hosted rollout remain launch operations; the explicitly future social/personalized modes remain later versions.
 
 ## Verification boundary
 

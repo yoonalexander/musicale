@@ -14,6 +14,9 @@ export interface Song {
   albumName: string;
   artworkUrl: string | null;
   releaseYear: number;
+  releaseDate?: string | null;
+  durationMs?: number | null;
+  recentMovement?: number;
   genre: string | null;
   eloRating: number;
   wins: number;
@@ -58,6 +61,7 @@ export interface VoteHistory {
   artist_name: string;
   genre: string | null;
   agreement: number;
+  selected_song_id?: string;
 }
 export interface SongMatchupHistory {
   matchup_day: string;
