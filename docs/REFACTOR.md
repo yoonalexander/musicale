@@ -23,4 +23,4 @@ The original launch phases now also include full leaderboard filtering/movement,
 
 Actual PostgreSQL migration/RLS/concurrency tests and desktop/mobile browser tests use an isolated local Supabase instance. Email links are delivered to a local catcher, not external recipients. TypeScript and production builds are verified locally. Automated accessibility checks supplement manual screenshot inspection; they do not establish accessibility for every browser or assistive technology.
 
-The refactor preserves the original migration and adds ordered upgrade migrations. Hosted migrations and deployed behavior must be checked during rollout; commit/push alone does not establish deployment success.
+The refactor preserves the original migration and adds ordered upgrade migrations. The fresh production project now has the ordered migrations and a verified public deployment; [deployment status](DEPLOYMENT.md) records the remaining email and authenticated-flow checks.
