@@ -614,6 +614,16 @@ summary {
   cursor: pointer;
   font-weight: 600;
 }
+details:not([open]) > :not(summary) {
+  display: none;
+}
+.admin-form label.checkbox-label {
+  display: flex;
+}
+.admin-form .checkbox-label input {
+  min-height: 20px;
+  padding: 0;
+}
 footer {
   flex-wrap: wrap;
 }
