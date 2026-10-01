@@ -275,18 +275,22 @@ small {
 .auth form,
 .admin-form {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 20px;
   margin-top: 35px;
 }
 .auth label,
 .admin-form label {
   display: grid;
+  min-width: 0;
   gap: 8px;
   font-weight: 700;
 }
 .auth input,
 .admin-form input,
 .admin-form select {
+  min-width: 0;
+  width: 100%;
   min-height: 50px;
   background: white;
   border: 1px solid var(--line);
@@ -621,6 +625,7 @@ details:not([open]) > :not(summary) {
   display: flex;
 }
 .admin-form .checkbox-label input {
+  width: 20px;
   min-height: 20px;
   padding: 0;
 }

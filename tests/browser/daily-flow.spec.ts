@@ -201,6 +201,10 @@ test("daily vote: magic link, keyboard vote, result, sharing and persistence", a
     page.getByRole("heading", { name: "Make tomorrow’s choice." }),
   ).toBeVisible();
   await page.getByLabel("K-factor (future votes)").fill("24");
+  // Long song options must not widen the mobile layout or zoom its hit targets.
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
   await page.getByRole("button", { name: "Save K-factor" }).click();
   await expect(
     page.getByText("K-factor saved for future votes."),
